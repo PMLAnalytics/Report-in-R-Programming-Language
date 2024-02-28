@@ -1,0 +1,161 @@
+---
+title: "Dark Chocolate Ratings"
+author: "Paul Lazarescu"
+date: "2022-10-16"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Business Objective
+Our project manager is looking for which countries produce the highest-rated
+bars of super dark chocolate (a high percentage of cocoa).
+This data will help them create their next chocolate bar menu.
+
+
+## Preview
+First, we start by checking our working directory. A working directory simply means
+the folder within which our files are stored. If the wd is incorrect or changes, roll
+back to base ("~/"), then set to correct folder location.
+Afterwards, we load the 'tidyverse' and 'rlang' packages for our analysis, as well as our dataset.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/paull/OneDrive/Documents/My Data Sources')
+
+#getwd()
+#setwd("~/")
+#getwd()
+#setwd("/Users/paull/OneDrive/Documents")
+#getwd()
+
+install.packages("tinytex", repos = "http://cran.us.r-project.org")
+library("tinytex")
+install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+library("tidyverse")
+install.packages("rlang", repos = "http://cran.us.r-project.org")
+library("rlang")
+install.packages("readr", repos = "http://cran.us.r-project.org")
+library("readr")
+#import dataset from working directory
+#tinytex is for PDF functionality
+```
+
+We run a few pieces of code that show us the data we are working with.
+```{r read, include=FALSE}
+chocolate_df <-read_csv("flavors_of_cocoa.csv")
+#str(chocolate_df) #raw summary
+#glimpse(chocolate_df) #horizontal
+```
+
+```{r colnames}
+colnames(chocolate_df)
+```
+
+```{r head}
+head(chocolate_df) #vertical
+```
+
+
+Before we trim down the dataset. Let's see what the highest rating possible is, and let's see how many countries
+we are working with.
+```{r trim, echo=FALSE}
+trimmed_flavors_df <- chocolate_df %>%
+  select(Rating, `Cocoa
+Percent`, `Company
+Location`)
+```
+
+```{r max}
+print(max(trimmed_flavors_df$Rating))
+```
+
+```{r distinct}
+n_distinct(trimmed_flavors_df$`Company
+Location`)
+```
+The highest rating attainable is a five, and the number of cocoa source locations is sixty.
+
+
+## Preparation
+In order to answer the business objective, we must filter for the data we are going to be using. We choose 3.5 because that represents a relatively high rating, and a cocoa percent of at-least 70%, as that is considered "dark" chocolate within our industry. For the purpose of ad-hoc analysis, this work perfectly.
+
+```{r best}
+best_trimmed_flavors_df <- trimmed_flavors_df %>%
+  filter(Rating >= "3.5", `Cocoa
+Percent` >= "70%")
+view(best_trimmed_flavors_df)
+```
+
+```{r graph1, echo=FALSE, warning=FALSE}
+graph1 <- ggplot(data = best_trimmed_flavors_df, aes(x=Rating)) +
+  geom_bar(mapping = aes(x = Rating, fill = "Rating")) +
+  geom_text(stat = 'count', aes(label=..count..), vjust=-0.25) +
+  labs(title="Number of Ratings Received",
+       caption=paste0("*Cocoa Percent over 70"),
+       x="Rating",
+       y="Count")
+plot(graph1)
+```
+
+Above is a visualization that shows the distribution of ratings. What it shows us is that there are very few dark chocolates that receive perfect ratings, but there are quite a lot between 3.5 to 4.0. This gives us ample sample size to work with.
+*Additional exploratory analysis also showed that the majority of ratings fall below 4.0, irrespective of cocoa percentage.*
+
+```{r clean, include=FALSE}
+install.packages("janitor", repos = "http://cran.us.r-project.org")
+library("janitor")
+#Janitor allows us clean up our dataset.
+best_cleaned <- best_trimmed_flavors_df %>% 
+  clean_names()
+best_cleaned
+#This is because the visualization tools in R limits what characters can be used in the ggplot2 graph code.
+#Clean_names() reforms the column names so that they can be used in our code for visualization.
+#Above, we see the dataset with our reformed column names.
+#In order to visualize the data more effectively, we must rename our column names.
+```
+
+
+## Analysis
+
+We want to see which countries produce the highest-rated dark chocolate. We have established a minimum cocoa percentage of 70%, a lowest rating of 3.5, and will be using a baseline (n) count of 20 ratings to give us an accurate sample size.
+
+```{r rated}
+highest_rated3 <- filter(summarise(group_by(best_cleaned, company_location), count=n(), mean(rating)), count >= 20)
+
+```
+
+```{r graph2, echo=FALSE}
+names(highest_rated3)[names(highest_rated3) == "count"] <- "count_bars"
+names(highest_rated3)[names(highest_rated3) == "mean(rating)"] <- "rating"
+```
+```{r graph3}
+print(highest_rated3[order(highest_rated3$rating, decreasing = TRUE), ])
+```
+Our table, sorted by highest ratings.
+Let's create a graph to visualize these findings.
+
+
+```{r graph4, echo=FALSE}
+highest_rated_location <- ggplot(highest_rated3, aes(x = company_location, y = rating)) + 
+  geom_point(stat = "identity", size = 3.35) +
+  theme(axis.text.x = element_text(angle = 25)) +
+  labs(title="Locations with Highest-Rated Dark Chocolate",
+       caption=paste0("*Minimum 20 ratings"),
+       x="Company Location",
+       y="Rating")
+plot(highest_rated_location)
+##highest_rated_location + labs(caption = c("*Cocoa Percent over 70", "*Minimum 20 ratings")) +
+ ## theme(plot.caption = element_text(vjust = c(0, 0.37)))
+##additional code not used during plotting
+```
+
+According to the graph, the location that provides us with the highest-rated bars of super dark chocolate is **Italy**. This analysis may be used as the basis for sourcing a larger quantity of our dark chocolate from the country of Italy.
+
+
+## Conclusion
+To surmise, our stakeholder was looking to find out which country produced the highest rated dark-chocolate. According to the findings, that country was: Italy, followed by France and then Australia.
+We can use this information to source more of our inventory from the most economically-viable source.
+
+Further analysis can be done by varying the levels of cocoa in the chocolate, joining a table containing shipping data
+and costs, finding the top-producing companies in a given region, or looking at specific bean origin.
+    
