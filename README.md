@@ -1,2 +1,2 @@
-# Report-in-R-Programming-Language
-Sample business analysis conducted on open source data
+# Report in R-language
+Sample business analysis conducted on open data source
